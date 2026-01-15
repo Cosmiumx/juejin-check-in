@@ -4,12 +4,13 @@
   "version": "1.0.0",
   "description": "自动为您在掘金平台进行签到，获取积分奖励，提升等级。无需手动操作，定时自动完成签到任务。",
   "icons": {
-    "16": "icon16.png",
-    "32": "icon32.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "64": "icons/icon64.png",
+    "128": "icons/icon128.png"
   },
-  "permissions": ["tabs", "storage", "activeTab", "alarms", "scripting"],
+  "permissions": ["tabs", "storage", "activeTab", "alarms"],
   "host_permissions": ["https://juejin.cn/*"],
   "background": {
     "service_worker": "service-worker.js",

@@ -9,3 +9,4 @@ export async function closeTab (tabId) {
     console.error(`关闭标签页 ${tabId} 时出错:`, error);
   }
 }
+

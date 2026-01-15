@@ -32,7 +32,7 @@ async function performCheckIn () {
     // 创建新的非激活标签页用于签到
     const tab = await chrome.tabs.create({
       url: JUEJIN_SIGNIN_URL,
-      active: true // 设置为非活动状态，即不激活标签页
+      active: false  // 设置为非活动状态，即不激活标签页
     });
 
     console.log(`创建签到标签页，ID: ${tab.id}`);
