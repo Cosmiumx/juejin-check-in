@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "掘金自动签到助手",
+  "name": "掘金签到助手",
   "version": "1.0.0",
-  "description": "自动为您在掘金平台进行签到，获取积分奖励，提升等级。无需手动操作，定时自动完成签到任务。",
+  "description": "掘金签到助手是一款便捷的浏览器扩展，协助用户在掘金平台完成每日签到任务。提供便捷的手动签到入口。插件完全尊重用户隐私，所有数据均在本地存储，不会收集或传输任何个人敏感信息。主要功能包括：签到状态监测、手动签到辅助等。使用前请确保您已在掘金网站登录账户并授权相关操作。",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -24,7 +24,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "掘金自动签到助手"
+    "default_title": "掘金签到助手"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
