@@ -2,79 +2,211 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>掘金自动签到</title>
+    <title>掘金签到助手</title>
     <style>
+      :root {
+        --primary-color: #2563eb;
+        --primary-hover: #1d4ed8;
+        --success-color: #10b981;
+        --warning-color: #ef4444;
+        --background: #fafafa;
+        --text-primary: #18181b;
+        --text-secondary: #71717a;
+        --border-color: #e4e4e7;
+        --card-bg: #ffffff;
+        --transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        width: 300px;
-        padding: 20px;
-        font-family: Arial, sans-serif;
+        width: 340px;
+        min-height: 300px;
+        margin: 0;
+        padding: 28px 24px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        background: var(--background);
+        color: var(--text-primary);
+        line-height: 1.6;
       }
 
       .container {
-        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
       }
 
       h1 {
         font-size: 18px;
-        margin-bottom: 20px;
-        color: #333;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+        text-align: center;
+      }
+
+      .status-card {
+        width: 100%;
+        padding: 18px 20px;
+        text-align: center;
+        transition: var(--transition);
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: var(--card-bg);
+      }
+
+      .status-card.signed {
+        background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+        border-color: #d1fae5;
+        color: #059669;
+      }
+
+      .status-card.not-signed {
+        background: linear-gradient(135deg, #fef2f2 0%, #fef1f1 100%);
+        border-color: #fecaca;
+        color: #dc2626;
+      }
+
+      .status-card.checking {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-secondary);
       }
 
       .status {
-        margin: 15px 0;
-        padding: 10px;
-        border-radius: 5px;
-      }
-
-      .status.signed {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-      }
-
-      .status.not-signed {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-      }
-
-      button {
-        background-color: #007cba;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
+        margin: 0;
         font-size: 14px;
-        margin: 5px;
-      }
-
-      button:hover {
-        background-color: #005a87;
-      }
-
-      button:disabled {
-        background-color: #cccccc;
-        cursor: not-allowed;
-      }
-
-      .manual-checkin {
-        margin-top: 15px;
+        font-weight: 500;
+        letter-spacing: -0.1px;
       }
 
       .last-checkin {
         font-size: 12px;
-        color: #666;
-        margin-top: 15px;
+        color: var(--text-secondary);
+        margin: 0;
+        text-align: center;
+        font-weight: 400;
+      }
+
+      .mode-selector {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+      }
+
+      .mode-selector label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+        letter-spacing: -0.1px;
+      }
+
+      .mode-selector select {
+        padding: 7px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--card-bg);
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--text-primary);
+        font-weight: 500;
+        transition: var(--transition);
+        outline: none;
+      }
+
+      .mode-selector select:hover {
+        border-color: #d4d4d8;
+      }
+
+      .mode-selector select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .buttons-container {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+
+      button {
+        flex: 1;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 11px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: var(--transition);
+        letter-spacing: -0.1px;
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: scale(1.02);
+      }
+
+      button:active:not(:disabled) {
+        transform: scale(0.98);
+      }
+
+      button:disabled {
+        background: #e4e4e7;
+        color: #a1a1aa;
+        cursor: not-allowed;
+      }
+
+      #checkInBtn.success {
+        background: var(--success-color);
+      }
+
+      #checkInBtn.success:hover:not(:disabled) {
+        background: #059669;
+      }
+
+      #checkInBtn.error {
+        background: var(--warning-color);
+      }
+
+      #checkInBtn.error:hover:not(:disabled) {
+        background: #dc2626;
+      }
+
+      #openJuejinBtn {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      #openJuejinBtn:hover:not(:disabled) {
+        background: #f4f4f5;
+        border-color: #d4d4d8;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>掘金自动签到</h1>
-      <div id="status" class="status">正在检查签到状态...</div>
+      <h1>掘金签到助手</h1>
+      <div class="status-card checking" id="statusCard">
+        <div id="status" class="status">正在检查签到状态...</div>
+      </div>
       <div id="lastCheckIn" class="last-checkin"></div>
-      <div class="manual-checkin">
+      <div class="mode-selector">
+        <label for="checkInMode">签到模式:</label>
+        <select id="checkInMode">
+          <option value="manual">手动</option>
+          <option value="auto">自动</option>
+        </select>
+      </div>
+
+      <div class="buttons-container">
         <button id="checkInBtn">手动签到</button>
         <button id="openJuejinBtn">打开掘金</button>
       </div>

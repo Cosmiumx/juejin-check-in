@@ -21,15 +21,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "performCheckIn") {
     console.log("收到签到指令，开始执行签到操作");
 
-    // 尝试执行签到操作
-    const checkInResult = performJuejinCheckIn();
-    sendResponse({ success: checkInResult });
+    // 使用Promise包装异步签到操作
+    const promise = new Promise((resolve, reject) => {
+      try {
+        const result = performJuejinCheckInWithCallback(resolve);
+        // 如果同步执行完成（例如未找到按钮），直接resolve
+        if (result !== undefined) {
+          resolve(result);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    // 等待结果并发送响应
+    promise.then(result => {
+      sendResponse({ success: result });
+    }).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+
+    // 返回true以保持消息通道开放
+    return true;
   }
-  return true; // 保持消息通道开放以支持异步响应
 });
 
 // 执行掘金签到的主要函数
-function performJuejinCheckIn () {
+function performJuejinCheckInWithCallback (callback) {
   try {
     // 查找签到按钮，通常在掘金页面的右上角区域
     // 根据掘金网站的常见布局，签到按钮可能有以下几种选择器：
@@ -117,7 +135,8 @@ function performJuejinCheckIn () {
             clickElement(signInButton);
           } else {
             console.log("即使滚动后，签到按钮仍然不可见");
-            return false;
+            callback && callback(false); // 使用回调
+            return;
           }
         }, 1000);
       } else {
@@ -130,11 +149,9 @@ function performJuejinCheckIn () {
         // 检查是否签到成功（按钮文本变化或其他UI变化）
         if (signInButton.textContent && signInButton.textContent.includes('已签到')) {
           console.log("签到成功！");
-          chrome.runtime.sendMessage({
-            action: "checkInResult",
-            success: true
-          });
-          return true;
+
+          callback && callback(true); // 使用回调
+          return;
         } else {
           // 尝试再次查找签到按钮，看是否状态改变
           const updatedButton = findElementWithText('button', '签到') ||
@@ -142,23 +159,21 @@ function performJuejinCheckIn () {
 
           if (!updatedButton || updatedButton.textContent.includes('已签到')) {
             console.log("签到成功！");
-            chrome.runtime.sendMessage({
-              action: "checkInResult",
-              success: true
-            });
-            return true;
+
+            callback && callback(true); // 使用回调
+            return;
           } else {
             console.log("签到可能失败或已完成");
-            return false;
+            callback && callback(false); // 使用回调
+            return;
           }
         }
       }, 2000);
 
-      return true; // 异步操作已经开始
+      return; // 异步操作已经开始
 
     } else {
       console.log("未找到签到按钮，可能今日已完成签到");
-
       // 检查是否存在显示已签到状态的元素
       const signedInElements = document.querySelectorAll('*');
       for (let element of signedInElements) {
@@ -167,21 +182,21 @@ function performJuejinCheckIn () {
             element.textContent.includes('打卡成功') ||
             element.classList.contains('signed'))) {
           console.log("检测到已签到状态");
-          chrome.runtime.sendMessage({
-            action: "checkInResult",
-            success: true  // 已经签到也算成功
-          });
-          return true;
+
+          callback && callback(true); // 使用回调
+          return;
         }
       }
 
       // 如果确实找不到签到按钮，可能是因为用户未登录或其他原因
       console.log("无法找到签到按钮，请确认您已登录掘金账号");
-      return false;
+      callback && callback(false); // 使用回调
+      return;
     }
   } catch (error) {
     console.error("执行签到时出错:", error);
-    return false;
+    callback && callback(false); // 使用回调
+    return;
   }
 }
 
@@ -213,28 +228,7 @@ function clickElement (element) {
 
 // 页面加载完成后初始化
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log("掘金签到插件已注入页面loading");
-  });
+  console.log("掘金签到插件已注入页面 (DOMContentLoaded)");
 } else {
-  console.log("掘金签到插件已注入页面");
+  console.log("掘金签到插件已注入页面 (已加载完成)");
 }
-
-// 监听DOM变化，以防页面动态加载签到按钮
-const observer = new MutationObserver((mutations) => {
-  mutations.forEach((mutation) => {
-    if (mutation.type === 'childList') {
-      // 如果添加了新的节点，重新检查是否有签到按钮
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // 可以在这里添加对新添加元素的签到按钮检查
-        }
-      });
-    }
-  });
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true
-});

@@ -1,99 +1,91 @@
 // popup.js - 弹窗界面的交互逻辑
 
 import { JUEJIN_SIGNIN_URL } from './constants.js';
-import { closeTab } from './utils.js';
+import { checkSignStatus, getCheckInMode } from './utils.js';
+import { updateStatusDisplay, forcePerformCheckIn } from './common-actions.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const statusDiv = document.getElementById('status');
   const lastCheckInDiv = document.getElementById('lastCheckIn');
   const checkInBtn = document.getElementById('checkInBtn');
   const openJuejinBtn = document.getElementById('openJuejinBtn');
+  const checkInModeSelect = document.getElementById('checkInMode');
 
-  // 检查今天的签到状态
-  async function checkTodayStatus () {
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  // 加载签到模式设置
+  async function loadCheckInMode () {
+    const mode = await getCheckInMode();
+    checkInModeSelect.value = mode || 'manual'; // 如果没有设置过，则默认为手动
+    currentMode = mode || 'manual'; // 初始化当前模式
+  }
 
-    const result = await chrome.storage.local.get(['lastCheckInDate']);
-    const lastCheckInDate = result.lastCheckInDate;
+  // 保存签到模式设置
+  async function saveCheckInMode (mode) {
+    await chrome.storage.sync.set({ checkInMode: mode });
+    console.log(`签到模式已设置为: ${mode}`);
+  }
 
-    if (lastCheckInDate === todayStr) {
-      statusDiv.textContent = '今日已签到';
-      statusDiv.className = 'status signed';
-      lastCheckInDiv.textContent = `最后签到: ${formatDate(new Date())}`;
-      checkInBtn.disabled = true;
-      checkInBtn.textContent = '已签到';
-    } else {
-      statusDiv.textContent = '今日未签到';
-      statusDiv.className = 'status not-signed';
-      lastCheckInDiv.textContent = lastCheckInDate ? `最后签到: ${lastCheckInDate}` : '尚未签到';
-      checkInBtn.disabled = false;
-      checkInBtn.textContent = '手动签到';
+  // 监听签到模式选择变化
+  let currentMode = 'manual'; // 追踪当前模式
+
+  checkInModeSelect.addEventListener('change', async (event) => {
+    const selectedMode = event.target.value;
+    const prevMode = currentMode; // 使用追踪的当前模式作为之前的模式
+
+    // 保存新的签到模式
+    await saveCheckInMode(selectedMode);
+
+    // 更新当前模式
+    currentMode = selectedMode;
+
+    // 如果是从手动切换到自动，且今天还没有签到，则执行一次签到
+    if (prevMode === 'manual' && selectedMode === 'auto') {
+      const isSignedInToday = await checkSignStatus();
+      if (!isSignedInToday) {
+        // 执行一次签到
+        await triggerManualCheckIn();
+      }
     }
-  }
+  });
 
-  // 格式化日期显示
-  function formatDate (date) {
-    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-  }
-
-  // 手动签到按钮点击事件
-  checkInBtn.addEventListener('click', async () => {
-    checkInBtn.disabled = true;
+  // 触发手动签到的函数
+  async function triggerManualCheckIn () {
     checkInBtn.textContent = '签到中...';
     statusDiv.textContent = '正在签到...';
+    statusDiv.className = 'status checking';
 
-    try {
-      // 创建新的非激活标签页用于签到
-      const juejinTab = await chrome.tabs.create({
-        url: JUEJIN_SIGNIN_URL,
-        active: false  // 设置为非激活状态
-      });
+    // 强制执行签到，绕过模式校验
+    const result = await forcePerformCheckIn();
 
-      console.log(`创建签到标签页，ID: ${juejinTab.id}`);
-
-      // 等待页面加载并发送签到消息
-      setTimeout(async () => {
-        try {
-          const result = await chrome.tabs.sendMessage(juejinTab.id, { action: "performCheckIn" });
-
-          // 签到完成后关闭标签页
-          // setTimeout(() => {
-          //   closeTab(juejinTab.id);
-          // }, 2000);
-
-          if (result && result.success) {
-            statusDiv.textContent = '签到成功！';
-            statusDiv.className = 'status signed';
-            checkInBtn.textContent = '已签到';
-            // 更新最后签到时间显示
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-            lastCheckInDiv.textContent = `最后签到: ${todayStr}`;
-
-            // 更新本地存储中的签到时间
-            await chrome.storage.local.set({ lastCheckInDate: todayStr });
-          } else {
-            statusDiv.textContent = '签到失败或已完成';
-            statusDiv.className = 'status not-signed';
-            checkInBtn.disabled = false;
-            checkInBtn.textContent = '重试';
-          }
-        } catch (error) {
-          console.error('签到过程中出错:', error);
-          statusDiv.textContent = '签到失败，请稍后重试';
-          statusDiv.className = 'status not-signed';
-          checkInBtn.disabled = false;
-          checkInBtn.textContent = '重试';
-        }
-      }, 2000);
-    } catch (error) {
-      console.error('签到过程中出错:', error);
-      statusDiv.textContent = '签到失败，请稍后重试';
+    if (result && result.success) {
+      // 签到成功后更新状态
+      await updateStatusDisplayFromCommon();
+    } else {
+      statusDiv.textContent = '签到失败或已完成';
       statusDiv.className = 'status not-signed';
       checkInBtn.disabled = false;
       checkInBtn.textContent = '重试';
     }
+  }
+
+  // 从公共模块获取状态显示的函数
+  async function updateStatusDisplayFromCommon () {
+    const statusInfo = await updateStatusDisplay();
+
+    statusDiv.textContent = statusInfo.statusText;
+    statusDiv.className = statusInfo.statusClass;
+    checkInBtn.textContent = statusInfo.buttonText;
+    checkInBtn.disabled = statusInfo.buttonDisabled;
+    lastCheckInDiv.textContent = statusInfo.lastCheckInText;
+  }
+
+  // 检查今天的签到状态
+  async function checkTodayStatus () {
+    await updateStatusDisplayFromCommon();
+  }
+
+  // 手动签到按钮点击事件
+  checkInBtn.addEventListener('click', async () => {
+    await triggerManualCheckIn();
   });
 
   // 打开掘金按钮点击事件
@@ -118,5 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 初始化状态
+  await loadCheckInMode();
   await checkTodayStatus();
 });
