@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "掘金签到助手",
+  "name": "Juejin Daily Companion",
   "version": "1.0.0",
-  "description": "一键在掘金平台完成每日签到任务。使用前请确保您已在掘金网站登录账户并授权相关操作。",
+  "description": "A personal productivity tool that helps you stay organized with your daily activities on Juejin developer community.",
+  "author": "Cosmiumx",
+  "homepage_url": "https://github.com/Cosmiumx/juejin-check-in",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -11,14 +13,18 @@
     "128": "icons/icon128.png"
   },
   "permissions": ["tabs", "storage", "activeTab", "alarms"],
-  "host_permissions": ["https://juejin.cn/*"],
+  "host_permissions": [
+    "https://juejin.cn/user/*"
+  ],
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://juejin.cn/*"],
+      "matches": [
+        "https://juejin.cn/user/*"
+      ],
       "js": ["content-script.js"]
     }
   ],
